@@ -18,10 +18,14 @@ let config: HardhatUserConfig = {
     coverage: {
       url: "http://127.0.0.1:8555",
     },
-    mainnet: {
-      url: process.env.ALCHEMY_API,
-      gasPrice: 55 * 1000000000,
-    },
+    // mainnet: {
+    //   url: process.env.ALCHEMY_API,
+    //   gasPrice: 55 * 1000000000,
+    // },
+    ava_test: {
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      gasPrice: 470 * 1000000000,
+    }
   },
   paths: {
     artifacts: "./build/artifacts",
@@ -66,11 +70,13 @@ if (process.env.ETHERSCAN_API) {
   config = { ...config, etherscan: { apiKey: process.env.ETHERSCAN_API } }
 }
 
+console.log(process.env.ACCOUNT_PRIVATE_KEYS)
+
 if (process.env.ACCOUNT_PRIVATE_KEYS) {
   config.networks = {
     ...config.networks,
-    mainnet: {
-      ...config.networks?.mainnet,
+    ava_test: {
+      ...config.networks?.ava_test,
       accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
     },
   }
