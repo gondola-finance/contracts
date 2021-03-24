@@ -1,9 +1,9 @@
-# saddle-contract
+# gondola-contract
 
-[![codecov](https://codecov.io/gh/saddle-finance/saddle-contract/branch/master/graph/badge.svg?token=CI26SD9SGE)](https://codecov.io/gh/saddle-finance/saddle-contract)
-[![CI](https://github.com/saddle-finance/saddle-contract/workflows/CI/badge.svg)](https://github.com/saddle-finance/saddle-contract/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/gondola-finance/gondola-contract/branch/master/graph/badge.svg?token=CI26SD9SGE)](https://codecov.io/gh/gondola-finance/gondola-contract)
+[![CI](https://github.com/gondola-finance/gondola-contract/workflows/CI/badge.svg)](https://github.com/gondola-finance/gondola-contract/actions?query=workflow%3ACI)
 
-The smart contracts behind [saddle.finance](https://saddle.finance) 🤠
+The smart contracts behind [gondola.finance](https://gondola.finance) 🤠
 
 The contracts are compiled with [Hardhat](https://hardhat.org/getting-started/), and tested using [Waffle](https://hardhat.org/guides/waffle-testing.html#testing-with-ethers-js-waffle) and [TypeScript](https://hardhat.org/guides/typescript.html#typescript-support).
 
@@ -59,7 +59,7 @@ You can connect to this RPC server via `http://localhost:8545` with chain ID of 
 $ npx solidity-docgen --templates=templates
 ```
 
-The output in the `docs` folder should be copied to the appropriate folder in the [saddle-docs repo](https://github.com/saddle-finance/saddle-docs/tree/master/solidity-docs).
+The output in the `docs` folder should be copied to the appropriate folder in the [gondola-docs repo](https://github.com/gondola-finance/gondola-docs/tree/master/solidity-docs).
 
 ### Running Slither
 
