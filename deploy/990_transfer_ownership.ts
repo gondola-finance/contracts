@@ -11,8 +11,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const contractsToTransferOwnership = [
     "Allowlist",
-    "SaddleBTCPool",
-    "SaddleUSDPool",
+    "GondolaBTCPool",
+    "GondolaUSDPool",
   ]
 
   const currentChain = await getChainId()

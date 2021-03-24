@@ -1,7 +1,7 @@
 {
-  "name": "saddle-contract",
+  "name": "gondola-contract",
   "version": "0.0.1",
-  "description": "The smart contracts behind saddle.finance 🤠",
+  "description": "The smart contracts behind gondola.finance 🤠",
   "files": [
     "dist/**/*"
   ],
@@ -80,7 +80,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/saddle-finance/saddle-contract.git"
+    "url": "git+https://github.com/gondola-finance/gondola-contract.git"
   },
   "keywords": [
     "cryptocurrency",
