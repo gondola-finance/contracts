@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@eth-optimism/smock": "^0.2.1-alpha.0",
-    "@openzeppelin/contracts": "3.4.1",
+    "@openzeppelin/contracts": "4.0.0",
     "@openzeppelin/contracts-upgradeable": "^3.4.1",
     "dotenv": "^8.2.0",
     "hardhat-typechain": "^0.3.5",
