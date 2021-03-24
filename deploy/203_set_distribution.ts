@@ -10,8 +10,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const now = Math.ceil(new Date().getTime() / 1000)
 
-  await execute("MasterChef", { from: deployer, log: true }, "setRewards", now + 100, now + 3600 * 24 * 30, BigNumber.from(10).pow(18))
-  await execute("MasterChef", { from: deployer, log: true }, "add", 500, gondolaUSDPoolLPToken, false)
+  await execute(
+    "MasterChef",
+    { from: deployer, log: true },
+    "setRewards",
+    now + 100,
+    now + 3600 * 24 * 30,
+    BigNumber.from(10).pow(18),
+  )
+  await execute(
+    "MasterChef",
+    { from: deployer, log: true },
+    "add",
+    500,
+    gondolaUSDPoolLPToken,
+    false,
+  )
 }
 
 export default func
