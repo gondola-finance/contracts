@@ -2,29 +2,41 @@ import { Contract, Signer } from "ethers"
 
 import { ethers } from "hardhat"
 import { BigNumber } from "ethers"
-import chai = require("chai")
+import chai from "chai"
 import { assert } from "chai"
 
 const should = chai.should()
 
-chai.use(require("chai-bignumber")())
+chai.use(require("chai-bignumber")()) // eslint-disable-line
+
+const currentTime = async () => {
+  const block = await ethers.provider.getBlockNumber()
+  const { timestamp } = await ethers.provider.getBlock(block)
+  return timestamp
+}
 
 describe("GondolaToken", async () => {
-    let signers: Array<Signer>
-    let owner: Signer
+  let signers: Array<Signer>
+  let owner: Signer
 
-    it("distribute token", async () => {
-        signers = await ethers.getSigners()
-        owner = signers[0]
+  it("distribute token", async () => {
+    await currentTime()
+    signers = await ethers.getSigners()
+    owner = signers[0]
 
-        const GondolaToken = await ethers.getContractFactory("GondolaToken");
-        const gondolaToken = await GondolaToken.deploy(BigNumber.from(10000).mul(BigNumber.from(10).pow(18)));
+    const GondolaToken = await ethers.getContractFactory("GondolaToken")
+    const gondolaToken = await GondolaToken.deploy(
+      BigNumber.from(10000).mul(BigNumber.from(10).pow(18)),
+    )
 
-        gondolaToken.distribute(await owner.getAddress(), BigNumber.from(100).mul(BigNumber.from(10).pow(18)))
-        const balance = await gondolaToken.balanceOf(await owner.getAddress())
+    gondolaToken.distribute(
+      await owner.getAddress(),
+      BigNumber.from(100).mul(BigNumber.from(10).pow(18)),
+    )
+    const balance = await gondolaToken.balanceOf(await owner.getAddress())
 
-        assert(BigNumber.from(100).mul(BigNumber.from(10).pow(18)).eq(balance))
-    })
+    assert(BigNumber.from(100).mul(BigNumber.from(10).pow(18)).eq(balance))
+  })
 })
 
 describe("MasterChef", async () => {
@@ -52,7 +64,7 @@ describe("MasterChef", async () => {
     await gondolaToken.transferOwnership(masterChef.address)
     await gondolaToken.approve(masterChef.address, amount)
 
-    const now = Math.ceil(new Date().getTime() / 1000)
+    const now = await currentTime()
     await masterChef.setRewards(
       now + 100,
       now + 900,
@@ -68,7 +80,10 @@ describe("MasterChef", async () => {
 
     pending = await masterChef.pendingGondola(0, await owner.getAddress())
 
-    assert(pending == 500 * 10 ** 18)
+    pending.should.be.bignumber.closeTo(
+      BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
+      BigNumber.from(10).pow(19),
+    )
 
     await ethers.provider.send("evm_increaseTime", [600])
     await ethers.provider.send("evm_mine", [])
@@ -82,37 +97,35 @@ describe("MasterChef", async () => {
     await gondolaToken.transferOwnership(masterChef.address)
     await gondolaToken.approve(masterChef.address, amount)
 
-    const now = Math.ceil(new Date().getTime() / 1000)
+    const now = await currentTime()
     await masterChef.setRewards(
       now + 100,
       now + 900,
-      BigNumber.from(10).pow(14),
+      BigNumber.from(10).pow(18),
     )
     await masterChef.add(500, gondolaToken.address, false)
     await masterChef.deposit(0, amount)
-
-    console.log(
-      "test:" + (await gondolaToken.balanceOf(await owner.getAddress())),
-    )
-
-    assert((await gondolaToken.balanceOf(await owner.getAddress())) == 0)
-
-    const pending = await masterChef.pendingGondola(0, await owner.getAddress())
+    let pending = await masterChef.pendingGondola(0, await owner.getAddress())
     assert(pending == 0)
 
     await ethers.provider.send("evm_increaseTime", [590])
     await ethers.provider.send("evm_mine", []) // advance by 10 sec
 
-    await masterChef.updatePool(0)
-    const beforeBalance = await gondolaToken.balanceOf(await owner.getAddress())
-    console.log("beforeBalance: " + beforeBalance)
+    pending = await masterChef.pendingGondola(0, await owner.getAddress())
 
-    await masterChef.withdraw(0, 0)
+    pending.should.be.bignumber.closeTo(
+      BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
+      BigNumber.from(10).pow(19),
+    )
+
+    await masterChef.connect(owner).withdraw(0, 0)
     const afterBalance = await gondolaToken.balanceOf(await owner.getAddress())
 
+    console.log("afterBalance: " + afterBalance)
+
     afterBalance.should.be.bignumber.closeTo(
-      BigNumber.from(500).mul(BigNumber.from(10).pow(14)),
-      10 ** 15,
+      BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
+      BigNumber.from(10).pow(19),
     )
   })
 })

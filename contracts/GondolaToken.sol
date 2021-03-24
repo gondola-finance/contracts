@@ -5,9 +5,8 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
 contract GondolaToken is ERC20, Ownable {
-    constructor(uint256 _totalSupply) public ERC20("GondolaToken", "GONDOLA"){
+    constructor(uint256 _totalSupply) public ERC20("GondolaToken", "GONDOLA") {
         _mint(address(this), _totalSupply);
     }
 

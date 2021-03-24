@@ -22,7 +22,7 @@ let config: HardhatUserConfig = {
     //   url: process.env.ALCHEMY_API,
     //   gasPrice: 55 * 1000000000,
     // },
-    ava_test: {
+    fuji: {
       url: "https://api.avax-test.network/ext/bc/C/rpc",
       gasPrice: 470 * 1000000000,
     }
@@ -75,8 +75,8 @@ console.log(process.env.ACCOUNT_PRIVATE_KEYS)
 if (process.env.ACCOUNT_PRIVATE_KEYS) {
   config.networks = {
     ...config.networks,
-    ava_test: {
-      ...config.networks?.ava_test,
+    fuji: {
+      ...config.networks?.fuji,
       accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
     },
   }

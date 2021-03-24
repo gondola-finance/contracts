@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./GondolaToken.sol";
-import "hardhat/console.sol";
 
 interface IMigratorChef {
     // Perform LP token migration from legacy UniswapV2 to GondolaSwap.
@@ -82,14 +81,15 @@ contract MasterChef is Ownable {
         uint256 amount
     );
 
-    constructor(
-        GondolaToken _gondola
-
-    ) public {
+    constructor(GondolaToken _gondola) public {
         gondola = _gondola;
     }
 
-    function setRewards(uint256 _startAt, uint256 _endAt, uint256 _gondolaPerSec) public onlyOwner {
+    function setRewards(
+        uint256 _startAt,
+        uint256 _endAt,
+        uint256 _gondolaPerSec
+    ) public onlyOwner {
         massUpdatePools();
         gondolaPerSec = _gondolaPerSec;
         endAt = _endAt;
@@ -161,10 +161,6 @@ contract MasterChef is Ownable {
         view
         returns (uint256)
     {
-
-        console.log("1. startAt: %s endAt: %s", startAt, endAt);
-        console.log("1. _from: %s _to: %s %s ", _from, _to, _to.sub(_from));
-
         if (_from < startAt) {
             _from = startAt;
         }
@@ -175,9 +171,6 @@ contract MasterChef is Ownable {
         if (_to < _from) {
             return 0;
         }
-        console.log("2. startAt: %s endAt: %s", startAt, endAt);
-
-        console.log("2. _from: %s _to: %s %s ", _from, _to, _to.sub(_from));
 
         return _to.sub(_from);
     }
@@ -203,7 +196,8 @@ contract MasterChef is Ownable {
                 gondolaReward.mul(1e12).div(lpSupply)
             );
         }
-        uint256 amount = user.amount.mul(accGondolaPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 amount =
+            user.amount.mul(accGondolaPerShare).div(1e12).sub(user.rewardDebt);
         return amount;
     }
 
@@ -270,6 +264,7 @@ contract MasterChef is Ownable {
             user.amount.mul(pool.accGondolaPerShare).div(1e12).sub(
                 user.rewardDebt
             );
+
         safeGondolaTransfer(msg.sender, pending);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accGondolaPerShare).div(1e12);

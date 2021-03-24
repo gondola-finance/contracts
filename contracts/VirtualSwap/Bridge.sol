@@ -150,7 +150,10 @@ contract Bridge is ERC721 {
      * @notice Deploys this contract and initializes the master version of the SynthSwapper contract. The address to
      * the Synthetix protocol's Exchanger contract is also set on deployment.
      */
-    constructor() public ERC721("Gondola Cross-Asset Swap", "GondolaSynthSwap") {
+    constructor()
+        public
+        ERC721("Gondola Cross-Asset Swap", "GondolaSynthSwap")
+    {
         SYNTH_SWAPPER_MASTER = address(new SynthSwapper());
         updateExchangerCache();
     }
