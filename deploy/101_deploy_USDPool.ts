@@ -7,9 +7,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
 
   // Manually check if the pool is already deployed
-  let saddleUSDPool = await getOrNull("SaddleUSDPool")
-  if (saddleUSDPool) {
-    log(`reusing "SaddleUSDPool" at ${saddleUSDPool.address}`)
+  let gondolaUSDPool = await getOrNull("GondolaUSDPool")
+  if (gondolaUSDPool) {
+    log(`reusing "GondolaUSDPool" at ${gondolaUSDPool.address}`)
   } else {
     // Constructor arguments
     const TOKEN_ADDRESSES = [
@@ -18,8 +18,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       (await get("USDT")).address,
     ]
     const TOKEN_DECIMALS = [18, 6, 6]
-    const LP_TOKEN_NAME = "Saddle DAI/USDC/USDT"
-    const LP_TOKEN_SYMBOL = "saddleUSD"
+    const LP_TOKEN_NAME = "Gondola DAI/USDC/USDT"
+    const LP_TOKEN_SYMBOL = "gondolaUSD"
     const INITIAL_A = 200
     const SWAP_FEE = 4e6 // 4bps
     const ADMIN_FEE = 0
@@ -47,17 +47,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log(
       `deployed USD pool clone (targeting "SwapFlashLoan") at ${usdSwapAddress}`,
     )
-    await save("SaddleUSDPool", {
+    await save("GondolaUSDPool", {
       abi: (await get("SwapFlashLoan")).abi,
       address: usdSwapAddress,
     })
   }
 
-  const lpTokenAddress = (await read("SaddleUSDPool", "swapStorage")).lpToken
+  const lpTokenAddress = (await read("GondolaUSDPool", "swapStorage")).lpToken
   log(`USD pool LP Token at ${lpTokenAddress}`)
 
-  await save("SaddleUSDPoolLPToken", {
-    abi: (await get("TBTC")).abi, // Generic ERC20 ABI
+  await save("GondolaUSDPoolLPToken", {
+    abi: (await get("USDT")).abi, // Generic ERC20 ABI
     address: lpTokenAddress,
   })
 }
