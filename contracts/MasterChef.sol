@@ -7,25 +7,26 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./SushiToken.sol";
+import "./GondolaToken.sol";
+import "hardhat/console.sol";
 
 interface IMigratorChef {
-    // Perform LP token migration from legacy UniswapV2 to SushiSwap.
+    // Perform LP token migration from legacy UniswapV2 to GondolaSwap.
     // Take the current LP token address and return the new LP token address.
     // Migrator should have full access to the caller's LP token.
     // Return the new LP token address.
     //
     // XXX Migrator must have allowance access to UniswapV2 LP tokens.
-    // SushiSwap must mint EXACTLY the same amount of SushiSwap LP tokens or
+    // GondolaSwap must mint EXACTLY the same amount of GondolaSwap LP tokens or
     // else something bad will happen. Traditional UniswapV2 does not
     // do that so be careful!
     function migrate(IERC20 token) external returns (IERC20);
 }
 
-// MasterChef is the master of Sushi. He can make Sushi and he is a fair guy.
+// MasterChef is the master of Gondola. He can make Gondola and he is a fair guy.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a governance smart contract once SUSHI is sufficiently
+// will be transferred to a governance smart contract once GONDOLA is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
@@ -37,13 +38,13 @@ contract MasterChef is Ownable {
         uint256 amount; // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         //
-        // We do some fancy math here. Basically, any point in time, the amount of SUSHIs
+        // We do some fancy math here. Basically, any point in time, the amount of GONDOLAs
         // entitled to a user but is pending to be distributed is:
         //
-        //   pending reward = (user.amount * pool.accSushiPerShare) - user.rewardDebt
+        //   pending reward = (user.amount * pool.accGondolaPerShare) - user.rewardDebt
         //
         // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accSushiPerShare` (and `lastRewardBlock`) gets updated.
+        //   1. The pool's `accGondolaPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
         //   3. User's `amount` gets updated.
         //   4. User's `rewardDebt` gets updated.
@@ -51,19 +52,17 @@ contract MasterChef is Ownable {
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken; // Address of LP token contract.
-        uint256 allocPoint; // How many allocation points assigned to this pool. SUSHIs to distribute per block.
-        uint256 lastRewardBlock; // Last block number that SUSHIs distribution occurs.
-        uint256 accSushiPerShare; // Accumulated SUSHIs per share, times 1e12. See below.
+        uint256 allocPoint; // How many allocation points assigned to this pool. GONDOLAs to distribute per block.
+        uint256 lastRewardAt; // Last timestamp that GONDOLAs distribution occurs.
+        uint256 accGondolaPerShare; // Accumulated GONDOLAs per share, times 1e12. See below.
     }
-    // The SUSHI TOKEN!
-    SushiToken public sushi;
-    // Dev address.
-    address public devaddr;
-    // Block number when bonus SUSHI period ends.
-    uint256 public bonusEndBlock;
-    // SUSHI tokens created per block.
-    uint256 public sushiPerBlock;
-    // Bonus muliplier for early sushi makers.
+    // The GONDOLA TOKEN!
+    GondolaToken public gondola;
+    // timestamp when bonus GONDOLA period ends.
+    uint256 public endAt;
+    // GONDOLA tokens created per second.
+    uint256 public gondolaPerSec;
+    // Bonus muliplier for early gondola makers.
     uint256 public constant BONUS_MULTIPLIER = 10;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
@@ -73,8 +72,8 @@ contract MasterChef is Ownable {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when SUSHI mining starts.
-    uint256 public startBlock;
+    // The timestamp when GONDOLA mining starts.
+    uint256 public startAt;
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(
@@ -84,17 +83,17 @@ contract MasterChef is Ownable {
     );
 
     constructor(
-        SushiToken _sushi,
-        address _devaddr,
-        uint256 _sushiPerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
+        GondolaToken _gondola
+
     ) public {
-        sushi = _sushi;
-        devaddr = _devaddr;
-        sushiPerBlock = _sushiPerBlock;
-        bonusEndBlock = _bonusEndBlock;
-        startBlock = _startBlock;
+        gondola = _gondola;
+    }
+
+    function setRewards(uint256 _startAt, uint256 _endAt, uint256 _gondolaPerSec) public onlyOwner {
+        massUpdatePools();
+        gondolaPerSec = _gondolaPerSec;
+        endAt = _endAt;
+        startAt = _startAt;
     }
 
     function poolLength() external view returns (uint256) {
@@ -111,20 +110,20 @@ contract MasterChef is Ownable {
         if (_withUpdate) {
             massUpdatePools();
         }
-        uint256 lastRewardBlock =
-            block.number > startBlock ? block.number : startBlock;
+        uint256 lastRewardAt =
+            block.timestamp > startAt ? block.timestamp : startAt;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(
             PoolInfo({
                 lpToken: _lpToken,
                 allocPoint: _allocPoint,
-                lastRewardBlock: lastRewardBlock,
-                accSushiPerShare: 0
+                lastRewardAt: lastRewardAt,
+                accGondolaPerShare: 0
             })
         );
     }
 
-    // Update the given pool's SUSHI allocation point. Can only be called by the owner.
+    // Update the given pool's GONDOLA allocation point. Can only be called by the owner.
     function set(
         uint256 _pid,
         uint256 _allocPoint,
@@ -156,46 +155,56 @@ contract MasterChef is Ownable {
         pool.lpToken = newLpToken;
     }
 
-    // Return reward multiplier over the given _from to _to block.
+    // Return reward multiplier over the given _from to _to timestamp.
     function getMultiplier(uint256 _from, uint256 _to)
         public
         view
         returns (uint256)
     {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return
-                bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                    _to.sub(bonusEndBlock)
-                );
+
+        console.log("1. startAt: %s endAt: %s", startAt, endAt);
+        console.log("1. _from: %s _to: %s %s ", _from, _to, _to.sub(_from));
+
+        if (_from < startAt) {
+            _from = startAt;
         }
+        if (_to > endAt) {
+            _to = endAt;
+        }
+
+        if (_to < _from) {
+            return 0;
+        }
+        console.log("2. startAt: %s endAt: %s", startAt, endAt);
+
+        console.log("2. _from: %s _to: %s %s ", _from, _to, _to.sub(_from));
+
+        return _to.sub(_from);
     }
 
-    // View function to see pending SUSHIs on frontend.
-    function pendingSushi(uint256 _pid, address _user)
+    // View function to see pending GONDOLAs on frontend.
+    function pendingGondola(uint256 _pid, address _user)
         external
         view
         returns (uint256)
     {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accSushiPerShare = pool.accSushiPerShare;
+        uint256 accGondolaPerShare = pool.accGondolaPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
+        if (block.timestamp > pool.lastRewardAt && lpSupply != 0) {
             uint256 multiplier =
-                getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 sushiReward =
-                multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(
+                getMultiplier(pool.lastRewardAt, block.timestamp);
+            uint256 gondolaReward =
+                multiplier.mul(gondolaPerSec).mul(pool.allocPoint).div(
                     totalAllocPoint
                 );
-            accSushiPerShare = accSushiPerShare.add(
-                sushiReward.mul(1e12).div(lpSupply)
+            accGondolaPerShare = accGondolaPerShare.add(
+                gondolaReward.mul(1e12).div(lpSupply)
             );
         }
-        return user.amount.mul(accSushiPerShare).div(1e12).sub(user.rewardDebt);
+        uint256 amount = user.amount.mul(accGondolaPerShare).div(1e12).sub(user.rewardDebt);
+        return amount;
     }
 
     // Update reward vairables for all pools. Be careful of gas spending!
@@ -209,38 +218,37 @@ contract MasterChef is Ownable {
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) {
+        if (block.timestamp <= pool.lastRewardAt) {
             return;
         }
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (lpSupply == 0) {
-            pool.lastRewardBlock = block.number;
+            pool.lastRewardAt = block.timestamp;
             return;
         }
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 sushiReward =
-            multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(
+        uint256 multiplier = getMultiplier(pool.lastRewardAt, block.timestamp);
+        uint256 gondolaReward =
+            multiplier.mul(gondolaPerSec).mul(pool.allocPoint).div(
                 totalAllocPoint
             );
-        sushi.mint(devaddr, sushiReward.div(10));
-        sushi.mint(address(this), sushiReward);
-        pool.accSushiPerShare = pool.accSushiPerShare.add(
-            sushiReward.mul(1e12).div(lpSupply)
+        gondola.distribute(address(this), gondolaReward);
+        pool.accGondolaPerShare = pool.accGondolaPerShare.add(
+            gondolaReward.mul(1e12).div(lpSupply)
         );
-        pool.lastRewardBlock = block.number;
+        pool.lastRewardAt = block.timestamp;
     }
 
-    // Deposit LP tokens to MasterChef for SUSHI allocation.
+    // Deposit LP tokens to MasterChef for GONDOLA allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending =
-                user.amount.mul(pool.accSushiPerShare).div(1e12).sub(
+                user.amount.mul(pool.accGondolaPerShare).div(1e12).sub(
                     user.rewardDebt
                 );
-            safeSushiTransfer(msg.sender, pending);
+            safeGondolaTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(
             address(msg.sender),
@@ -248,7 +256,7 @@ contract MasterChef is Ownable {
             _amount
         );
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accGondolaPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -259,12 +267,12 @@ contract MasterChef is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
         uint256 pending =
-            user.amount.mul(pool.accSushiPerShare).div(1e12).sub(
+            user.amount.mul(pool.accGondolaPerShare).div(1e12).sub(
                 user.rewardDebt
             );
-        safeSushiTransfer(msg.sender, pending);
+        safeGondolaTransfer(msg.sender, pending);
         user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accGondolaPerShare).div(1e12);
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         emit Withdraw(msg.sender, _pid, _amount);
     }
@@ -279,19 +287,13 @@ contract MasterChef is Ownable {
         user.rewardDebt = 0;
     }
 
-    // Safe sushi transfer function, just in case if rounding error causes pool to not have enough SUSHIs.
-    function safeSushiTransfer(address _to, uint256 _amount) internal {
-        uint256 sushiBal = sushi.balanceOf(address(this));
-        if (_amount > sushiBal) {
-            sushi.transfer(_to, sushiBal);
+    // Safe gondola transfer function, just in case if rounding error causes pool to not have enough GONDOLAs.
+    function safeGondolaTransfer(address _to, uint256 _amount) internal {
+        uint256 gondolaBal = gondola.balanceOf(address(this));
+        if (_amount > gondolaBal) {
+            gondola.transfer(_to, gondolaBal);
         } else {
-            sushi.transfer(_to, _amount);
+            gondola.transfer(_to, _amount);
         }
-    }
-
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
     }
 }
