@@ -1,13 +1,13 @@
 import { Contract, Signer } from "ethers"
-
 import { ethers } from "hardhat"
+import { solidity } from "ethereum-waffle"
 import { BigNumber } from "ethers"
 import chai from "chai"
-import { assert } from "chai"
+import { expect } from "chai"
 
 const should = chai.should()
 
-chai.use(require("chai-bignumber")()) // eslint-disable-line
+chai.use(solidity)
 
 const currentTime = async () => {
   const block = await ethers.provider.getBlockNumber()
@@ -35,7 +35,7 @@ describe("GondolaToken", async () => {
     )
     const balance = await gondolaToken.balanceOf(await owner.getAddress())
 
-    assert(BigNumber.from(100).mul(BigNumber.from(10).pow(18)).eq(balance))
+    expect(BigNumber.from(100).mul(BigNumber.from(10).pow(18))).eq(balance)
   })
 })
 
@@ -73,14 +73,14 @@ describe("MasterChef", async () => {
     await masterChef.add(500, gondolaToken.address, false)
     await masterChef.deposit(0, amount)
     let pending = await masterChef.pendingGondola(0, await owner.getAddress())
-    assert(pending == 0)
+    expect(pending).to.eq(0)
 
     await ethers.provider.send("evm_increaseTime", [590])
     await ethers.provider.send("evm_mine", []) // advance by 10 sec
 
     pending = await masterChef.pendingGondola(0, await owner.getAddress())
 
-    pending.should.be.bignumber.closeTo(
+    pending.should.closeTo(
       BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
       BigNumber.from(10).pow(19),
     )
@@ -88,7 +88,7 @@ describe("MasterChef", async () => {
     await ethers.provider.send("evm_increaseTime", [600])
     await ethers.provider.send("evm_mine", [])
     pending = await masterChef.pendingGondola(0, await owner.getAddress())
-    assert(pending == 800 * 10 ** 18)
+    expect(pending).to.eq(BigNumber.from(800).mul(BigNumber.from(10).pow(18)))
   })
 
   it("updatePool and withdraw tokens", async () => {
@@ -106,14 +106,14 @@ describe("MasterChef", async () => {
     await masterChef.add(500, gondolaToken.address, false)
     await masterChef.deposit(0, amount)
     let pending = await masterChef.pendingGondola(0, await owner.getAddress())
-    assert(pending == 0)
+    expect(pending == 0)
 
     await ethers.provider.send("evm_increaseTime", [590])
     await ethers.provider.send("evm_mine", []) // advance by 10 sec
 
     pending = await masterChef.pendingGondola(0, await owner.getAddress())
 
-    pending.should.be.bignumber.closeTo(
+    pending.should.be.closeTo(
       BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
       BigNumber.from(10).pow(19),
     )
@@ -123,7 +123,7 @@ describe("MasterChef", async () => {
 
     console.log("afterBalance: " + afterBalance)
 
-    afterBalance.should.be.bignumber.closeTo(
+    afterBalance.should.be.closeTo(
       BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
       BigNumber.from(10).pow(19),
     )
