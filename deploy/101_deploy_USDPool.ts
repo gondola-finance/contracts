@@ -14,11 +14,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     // Constructor arguments
     const TOKEN_ADDRESSES = [
       (await get("DAI")).address,
-      (await get("USDC")).address,
+      (await get("TUSD")).address,
       (await get("USDT")).address,
     ]
     const TOKEN_DECIMALS = [18, 6, 6]
-    const LP_TOKEN_NAME = "Gondola DAI/USDC/USDT"
+    const LP_TOKEN_NAME = "Gondola DAI/TUSD/USDT"
     const LP_TOKEN_SYMBOL = "gondolaUSD"
     const INITIAL_A = 200
     const SWAP_FEE = 4e6 // 4bps

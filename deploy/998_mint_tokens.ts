@@ -10,7 +10,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
   let poolAddress = (await get("GondolaUSDPool")).address
 
-  const TOKENS = ["DAI", "USDC", "USDT"]
+  const TOKENS = ["DAI", "TUSD", "USDT"]
   return
 
   const amounts = []
