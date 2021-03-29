@@ -8,7 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
   let gondolaUSDPoolLPToken = (await get("GondolaUSDPoolLPToken")).address
 
-  const now = Math.ceil(new Date().getTime() / 1000)
+  const now = 1617055200
 
   await execute(
     "MasterChef",
