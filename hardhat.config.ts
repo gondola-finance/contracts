@@ -25,6 +25,10 @@ let config: HardhatUserConfig = {
     fuji: {
       url: "https://api.avax-test.network/ext/bc/C/rpc",
       gasPrice: 470 * 1000000000,
+    },
+    ava_mainnet: {
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      gasPrice: 470 * 1000000000,  
     }
   },
   paths: {
@@ -77,6 +81,10 @@ if (process.env.ACCOUNT_PRIVATE_KEYS) {
     ...config.networks,
     fuji: {
       ...config.networks?.fuji,
+      accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
+    },
+    ava_mainnet: {
+      ...config.networks?.ava_mainnet,
       accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
     },
   }

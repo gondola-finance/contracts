@@ -16,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const amounts = []
 
   const currentChain = await getChainId()
-  if (currentChain == CHAIN_ID.AVATEST) {
+  if (currentChain == CHAIN_ID.AVAFUJI) {
     for (const token of TOKENS) {
       let decimals = await read(token, "decimals")
       let amount = BigNumber.from(100000).mul(BigNumber.from(10).pow(decimals))
@@ -46,4 +46,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func
 func.tags = ["TransferOwnership"]
-func.dependencies = ["Allowlist", "USDPool"]
+func.dependencies = [ "USDPool"]

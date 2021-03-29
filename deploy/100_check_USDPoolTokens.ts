@@ -13,6 +13,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts, getChainId } = hre
   const { deploy, execute } = deployments
   const { deployer } = await getNamedAccounts()
+  const currentChain = await getChainId()
+
+  if (currentChain == CHAIN_ID.AVA_MAINNET) {
+    return
+  }
 
   for (const token in USD_TOKENS_ARGS) {
     await deploy(token, {

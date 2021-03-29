@@ -16,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     "setRewards",
     now + 1,
     now + 3600 * 24 * 31 * 2,
-    BigNumber.from(10).pow(18).mul(BigNumber.from("18.6678614")),
+    BigNumber.from("18667861400000000000"),
   )
 
   await execute(
