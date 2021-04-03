@@ -8,7 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
   let masterChefAddress = (await get("MasterChef")).address
 
-  await execute("GondolaToken", { from: deployer, log: true }, "transferOwnership", masterChefAddress)
+  // await execute("GondolaToken", { from: deployer, log: true }, "transferOwnership", masterChefAddress)
 }
 
 export default func
