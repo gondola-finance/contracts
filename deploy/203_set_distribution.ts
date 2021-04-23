@@ -8,9 +8,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
   let gondolaUSDPoolLPToken = (await get("GondolaUSDPoolLPToken")).address
   let GondolaToken = (await get("GondolaToken")).address
-  const now = 1617890000
+  const now = 1618416187
 
-  await execute("MasterChef",{ from: deployer, log: true },"setRewards",now + 1,now + 3600 * 24 * 31 * 2,BigNumber.from("18667861400000000000"),)
+  // await execute("MasterChef",{ from: deployer, log: true },"setRewards",now + 1,now + 3600 * 24 * 31 * 2,BigNumber.from("18667861400000000000"))
   
   await execute(
     "MasterChef",
@@ -21,23 +21,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     false,
   )
 
-  await execute(
-    "MasterChef",
-    { from: deployer, log: true },
-    "add",
-    500,
-    gondolaUSDPoolLPToken,
-    false,
-  )
+  // await execute(
+  //   "MasterChef",
+  //   { from: deployer, log: true },
+  //   "add",
+  //   500,
+  //   gondolaUSDPoolLPToken,
+  //   false,
+  // )
 
-  await execute(
-    "MasterChef",
-    { from: deployer, log: true },
-    "add",
-    500,
-    GondolaToken,
-    false,
-  )
+  // await execute(
+  //   "MasterChef",
+  //   { from: deployer, log: true },
+  //   "add",
+  //   500,
+  //   GondolaToken,
+  //   false,
+  // )
 }
 
 export default func
