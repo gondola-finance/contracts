@@ -28,7 +28,7 @@ let config: HardhatUserConfig = {
     },
     ava_mainnet: {
       url: "https://api.avax.network/ext/bc/C/rpc",
-      gasPrice: 470 * 1000000000,  
+      gasPrice: 225 * 1000000000,  
     }
   },
   paths: {

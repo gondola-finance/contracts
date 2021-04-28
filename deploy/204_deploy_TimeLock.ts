@@ -4,13 +4,18 @@ import { BigNumber } from "ethers"
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre
-  const { deploy, get, execute } = deployments
+  const { deploy, get } = deployments
   const { deployer } = await getNamedAccounts()
-  let masterChefAddress = (await get("MasterChef")).address
+  let tokenAddress = (await get("GondolaToken")).address
 
-  // await execute("GondolaToken", { from: deployer, log: true }, "transferOwnership", masterChefAddress)
+  await deploy("TimeLock", {
+    from: deployer,
+    log: true,
+    skipIfAlreadyDeployed: true,
+    args: [tokenAddress],
+  })
 }
 
 export default func
-func.tags = ["MasterChef"]
+func.tags = ["TimeLock"]
 func.dependencies = ["GondolaToken"]
