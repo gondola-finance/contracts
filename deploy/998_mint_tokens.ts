@@ -11,7 +11,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   let poolAddress = (await get("GondolaUSDPool")).address
 
   const TOKENS = ["DAI", "USDT"]
-  
 
   const amounts = []
 
@@ -20,16 +19,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     for (const token of TOKENS) {
       let decimals = await read(token, "decimals")
       let amount = BigNumber.from(100000).mul(BigNumber.from(10).pow(decimals))
-      await execute(token, { from: deployer, log: true }, "mint", deployer, amount)
-      
-    //   await execute(
-    //     token,
-    //     { from: deployer, log: true },
-    //     "approve",
-    //     poolAddress,
-    //     amount.div(10),
-    //   )
-    //   amounts.push(amount)
+      await execute(
+        token,
+        { from: deployer, log: true },
+        "mint",
+        deployer,
+        amount,
+      )
+
+      //   await execute(
+      //     token,
+      //     { from: deployer, log: true },
+      //     "approve",
+      //     poolAddress,
+      //     amount.div(10),
+      //   )
+      //   amounts.push(amount)
     }
     // console.log(amounts)
     // await execute(
@@ -47,4 +52,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func
 func.tags = ["TransferOwnership"]
-func.dependencies = [ "USDPool"]
+func.dependencies = ["USDPool"]

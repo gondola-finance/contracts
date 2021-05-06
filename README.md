@@ -59,7 +59,7 @@ You can connect to this RPC server via `http://localhost:8545` with chain ID of 
 $ npx solidity-docgen --templates=templates
 ```
 
-The output in the `docs` folder should be copied to the appropriate folder in the [gondola-docs repo](https://github.com/gondola-finance/gondola-docs/tree/master/solidity-docs).
+The output in the `docs` folder should be copied to the appropriate folder in the [docs repo](https://github.com/gondola-finance/docs/tree/master/solidity-docs).
 
 ### Running Slither
 

@@ -42,9 +42,7 @@ describe("Timelock", async () => {
     const time = await currentTime()
     await timelock.deposit(await owner.getAddress(), amount, time + 100)
 
-    await expect(
-      timelock.withdraw(0)
-    ).to.be.reverted
+    await expect(timelock.withdraw(0)).to.be.reverted
     await ethers.provider.send("evm_increaseTime", [100])
     await ethers.provider.send("evm_mine", [])
     await timelock.withdraw(0)
@@ -57,7 +55,12 @@ describe("Timelock", async () => {
     const time = await currentTime()
     await timelock.deposit(await owner.getAddress(), amount, time + 100)
     await expect(
-      timelock.transferLockedFunds(0, await owner.getAddress(), amount, time + 1)
+      timelock.transferLockedFunds(
+        0,
+        await owner.getAddress(),
+        amount,
+        time + 1,
+      ),
     ).to.be.reverted
   })
 
@@ -67,7 +70,12 @@ describe("Timelock", async () => {
     await gondolaToken.approve(timelock.address, amount)
     const time = await currentTime()
     await timelock.deposit(await owner.getAddress(), amount, time + 100)
-    await timelock.transferLockedFunds(0, await signers[1].getAddress(), amount, time + 100)
+    await timelock.transferLockedFunds(
+      0,
+      await signers[1].getAddress(),
+      amount,
+      time + 100,
+    )
 
     await ethers.provider.send("evm_increaseTime", [100])
     await ethers.provider.send("evm_mine", [])

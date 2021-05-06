@@ -15,6 +15,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts()
   const currentChain = await getChainId()
 
+  await execute(
+    "GondolaDAIPool",
+    { from: deployer, log: true },
+    "rampA",
+    30,
+    1621036800,
+  )
+
   if (currentChain == CHAIN_ID.AVA_MAINNET) {
     return
   }
