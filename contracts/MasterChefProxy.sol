@@ -31,37 +31,115 @@ interface IMasterChef {
 contract MasterChefProxy is Ownable {
     using SafeMath for uint256;
 
+    struct Add {
+        uint256 allocPoint;
+        IERC20 lpToken;
+        bool withUpdate;
+        bool executed;
+        uint256 queuedAt;
+    }
+
+    struct Set {
+        uint256 pid;
+        uint256 allocPoint;
+        bool withUpdate;
+        bool executed;
+        uint256 queuedAt;
+    }
+
+    struct SetRewards {
+        uint256 startAt;
+        uint256 endAt;
+        uint256 gondolaPerSec;
+        bool executed;
+        uint256 queuedAt;
+    }
+
     IMasterChef public masterChef;
-    uint256 public DELAY = 14 * 24 * 3600;
+    uint256 public TRANSFER_DELAY = 14 * 24 * 3600;
+    uint256 public DELAY = 2 * 24 * 3600;
     uint256 public transferStartedAt;
     address public transferTo;
+    Add[] public addQueue;
+    Set[] public setQueue;
+    SetRewards[] public rewardsQueue;
 
     constructor(IMasterChef _masterChef) public {
         masterChef = _masterChef;
     }
 
-    function add(
+    function initAdd(
         uint256 _allocPoint,
         IERC20 _lpToken,
         bool _withUpdate
     ) public onlyOwner {
-        masterChef.add(_allocPoint, _lpToken, _withUpdate);
+        addQueue.push(
+            Add({
+                allocPoint: _allocPoint,
+                lpToken: _lpToken,
+                withUpdate: _withUpdate,
+                executed: false,
+                queuedAt: block.timestamp
+            })
+        );
+        //
     }
 
-    function set(
+    function initSet(
         uint256 _pid,
         uint256 _allocPoint,
         bool _withUpdate
     ) public onlyOwner {
-        masterChef.set(_pid, _allocPoint, _withUpdate);
+        setQueue.push(
+            Set({
+                pid: _pid,
+                allocPoint: _allocPoint,
+                withUpdate: _withUpdate,
+                executed: false,
+                queuedAt: block.timestamp
+            })
+        );
+        //
     }
 
-    function setRewards(
+    function initSetRewards(
         uint256 _startAt,
         uint256 _endAt,
         uint256 _gondolaPerSec
     ) public onlyOwner {
-        masterChef.setRewards(_startAt, _endAt, _gondolaPerSec);
+        rewardsQueue.push(
+            SetRewards({
+                startAt: _startAt,
+                endAt: _endAt,
+                gondolaPerSec: _gondolaPerSec,
+                executed: false,
+                queuedAt: block.timestamp
+            })
+        );
+    }
+
+    function executeAdd(uint256 id) public onlyOwner {
+        Add memory add = addQueue[id];
+        require(add.executed == false, "already executed");
+        require(block.timestamp > add.queuedAt.add(DELAY), "Too early");
+        addQueue[id].executed = true;
+        masterChef.add(add.allocPoint, add.lpToken, add.withUpdate);
+    }
+
+    function executeSet(uint256 id) public onlyOwner {
+        Set memory set = setQueue[id];
+        require(set.executed == false, "already executed");
+        require(block.timestamp > set.queuedAt.add(DELAY), "Too early");
+        setQueue[id].executed = true;
+        masterChef.set(set.pid, set.allocPoint, set.withUpdate);
+    }
+
+    function executeSetRewards(uint256 id) public onlyOwner {
+        SetRewards memory setR = rewardsQueue[id];
+        require(setR.executed == false, "already executed");
+        require(block.timestamp > setR.queuedAt.add(DELAY), "Too early");
+        rewardsQueue[id].executed = true;
+        masterChef.setRewards(setR.startAt, setR.endAt, setR.gondolaPerSec);
     }
 
     function initMasterChefTransfer(address to) public onlyOwner {
@@ -74,7 +152,10 @@ contract MasterChefProxy is Ownable {
             owner() == _msgSender() || transferTo == _msgSender(),
             "Ownable: caller is not the owner or future owner"
         );
-        require(block.timestamp > transferStartedAt.add(DELAY), "Too early");
+        require(
+            block.timestamp > transferStartedAt.add(TRANSFER_DELAY),
+            "Too early"
+        );
         masterChef.transferOwnership(transferTo);
     }
 }

@@ -61,32 +61,66 @@ describe("MasterChefProxy", async () => {
     )
   })
 
-  it("can update masterchef using the proxy", async () => {
+  it("can setRewards masterchef using the proxy", async () => {
     const now = await currentTime()
 
     expect(await masterChefProxy.masterChef()).to.eq(masterChef.address)
 
-    await masterChefProxy.setRewards(
+    await masterChefProxy.initSetRewards(
       now + 100,
       now + 900,
       BigNumber.from(10).pow(18),
     )
 
+    await expect(masterChefProxy.executeSetRewards(0)).to.be.revertedWith(
+      "Too early",
+    )
+
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 3600 + 1])
+    await masterChefProxy.executeSetRewards(0)
+
     expect(await masterChef.gondolaPerSec()).to.eq(BigNumber.from(10).pow(18))
     expect(await masterChef.startAt()).to.eq(BigNumber.from(now + 100))
     expect(await masterChef.endAt()).to.eq(BigNumber.from(now + 900))
 
-    await masterChefProxy.add(500, gondolaToken.address, false)
-    let poolInfo = await masterChef.poolInfo(0)
-    assert(poolInfo.lpToken == gondolaToken.address)
-    expect(poolInfo.allocPoint).to.equal(500)
-
-    await masterChefProxy.set(0, 100, false)
-    poolInfo = await masterChef.poolInfo(0)
-    expect(poolInfo.allocPoint).to.equal(100)
+    await expect(masterChefProxy.executeSetRewards(0)).to.be.revertedWith(
+      "already executed",
+    )
   })
 
-  it("let transfer after a week", async () => {
+  it("can add masterchef using the proxy", async () => {
+    await masterChefProxy.initAdd(500, gondolaToken.address, false)
+
+    await expect(masterChefProxy.executeAdd(0)).to.be.revertedWith("Too early")
+
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 3600 + 1])
+    await masterChefProxy.executeAdd(0)
+    const { lpToken, allocPoint } = await masterChef.poolInfo(0)
+    expect(lpToken == gondolaToken.address)
+    expect(allocPoint).to.eq(500)
+    await expect(masterChefProxy.executeAdd(0)).to.be.revertedWith("already executed")
+
+  })
+
+  it("can set masterchef using the proxy", async () => {
+    await masterChefProxy.initAdd(500, gondolaToken.address, false)
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 3600 + 1])
+    await masterChefProxy.executeAdd(0)
+
+    await masterChefProxy.initSet(0, 100, false)
+
+    await expect(masterChefProxy.executeSet(0)).to.be.revertedWith("Too early")
+
+    await ethers.provider.send("evm_increaseTime", [2 * 24 * 3600 + 1])
+    await masterChefProxy.executeSet(0)
+
+    const { lpToken, allocPoint } = await masterChef.poolInfo(0)
+    expect(allocPoint).to.eq(100)
+    await expect(masterChefProxy.executeSet(0)).to.be.revertedWith("already executed")
+
+  })
+
+  it("let transfer after two weeks", async () => {
     expect(await masterChef.owner()).to.eq(masterChefProxy.address)
     const newOwner = await owner.getAddress()
     await masterChefProxy.initMasterChefTransfer(newOwner)
