@@ -12,7 +12,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // let GondolaETHPoolLPToken = (await get("GondolaETHPoolLPToken")).address
   // let GondolaUSDTPoolLPToken = (await get("GondolaUSDTPoolLPToken")).address
   // let GondolaDAIPoolLPToken = (await get("GondolaDAIPoolLPToken")).address
-  let AvaxGdl = "0xc5ab0c94bc88b98f55f4e21c1474f67ab2329cfd"
+  // let AvaxGdl = "0xc5ab0c94bc88b98f55f4e21c1474f67ab2329cfd"
   // let ZeroGDL = "0x158ede7f02475aa067fa35f4ff26c6cd86129429"
 
   // await execute("GondolaETHPool", { from: deployer, log: true }, "pause")
