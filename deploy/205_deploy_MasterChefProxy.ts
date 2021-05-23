@@ -4,7 +4,7 @@ import { BigNumber } from "ethers"
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre
-  const { deploy, get, execute } = deployments
+  const { deploy, get, execute, read } = deployments
   const { deployer } = await getNamedAccounts()
 
   let masterChefAddress = (await get("MasterChef")).address
@@ -17,7 +17,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   })
   let masterChefProxyAddress = (await get("MasterChefProxy")).address
 
-  await execute("MasterChef", { from: deployer, log: true }, "transferOwnership", masterChefProxyAddress)
+  const currentOwner = await read("MasterChef", "owner")
+  if (currentOwner == deployer) {
+    await execute("MasterChef", { from: deployer, log: true }, "transferOwnership", masterChefProxyAddress)
+  }
 
 }
 
