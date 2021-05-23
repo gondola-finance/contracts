@@ -1,4 +1,5 @@
 import { Contract, Signer } from "ethers"
+import { getCurrentBlockTimestamp } from "./testUtils"
 import { ethers } from "hardhat"
 import { solidity } from "ethereum-waffle"
 import { BigNumber } from "ethers"
@@ -9,18 +10,12 @@ const should = chai.should()
 
 chai.use(solidity)
 
-const currentTime = async () => {
-  const block = await ethers.provider.getBlockNumber()
-  const { timestamp } = await ethers.provider.getBlock(block)
-  return timestamp
-}
-
 describe("GondolaToken", async () => {
   let signers: Array<Signer>
   let owner: Signer
 
   it("distribute token", async () => {
-    await currentTime()
+    await getCurrentBlockTimestamp()
     signers = await ethers.getSigners()
     owner = signers[0]
 
@@ -64,7 +59,7 @@ describe("MasterChef", async () => {
     await gondolaToken.transferOwnership(masterChef.address)
     await gondolaToken.approve(masterChef.address, amount)
 
-    const now = await currentTime()
+    const now = await getCurrentBlockTimestamp()
     await masterChef.setRewards(
       now + 100,
       now + 900,
@@ -97,7 +92,7 @@ describe("MasterChef", async () => {
     await gondolaToken.transferOwnership(masterChef.address)
     await gondolaToken.approve(masterChef.address, amount)
 
-    const now = await currentTime()
+    const now = await getCurrentBlockTimestamp()
     await masterChef.setRewards(
       now + 100,
       now + 900,

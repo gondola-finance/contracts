@@ -1,4 +1,5 @@
 import { Contract, Signer } from "ethers"
+import { getCurrentBlockTimestamp } from "./testUtils"
 import { ethers } from "hardhat"
 import { solidity } from "ethereum-waffle"
 import { BigNumber } from "ethers"
@@ -8,13 +9,6 @@ import { expect } from "chai"
 const should = chai.should()
 
 chai.use(solidity)
-
-const currentTime = async () => {
-  const block = await ethers.provider.getBlockNumber()
-  const { timestamp } = await ethers.provider.getBlock(block)
-
-  return timestamp
-}
 
 describe("Timelock", async () => {
   let signers: Array<Signer>
@@ -39,7 +33,7 @@ describe("Timelock", async () => {
     const amount = BigNumber.from(100).mul(BigNumber.from(10).pow(18))
     await gondolaToken.distribute(await owner.getAddress(), amount)
     await gondolaToken.approve(timelock.address, amount)
-    const time = await currentTime()
+    const time = await getCurrentBlockTimestamp()
     await timelock.deposit(await owner.getAddress(), amount, time + 100)
 
     await expect(timelock.withdraw(0)).to.be.reverted
@@ -52,7 +46,7 @@ describe("Timelock", async () => {
     const amount = BigNumber.from(100).mul(BigNumber.from(10).pow(18))
     await gondolaToken.distribute(await owner.getAddress(), amount)
     await gondolaToken.approve(timelock.address, amount)
-    const time = await currentTime()
+    const time = await getCurrentBlockTimestamp()
     await timelock.deposit(await owner.getAddress(), amount, time + 100)
     await expect(
       timelock.transferLockedFunds(
@@ -68,7 +62,7 @@ describe("Timelock", async () => {
     const amount = BigNumber.from(100).mul(BigNumber.from(10).pow(18))
     await gondolaToken.distribute(await owner.getAddress(), amount)
     await gondolaToken.approve(timelock.address, amount)
-    const time = await currentTime()
+    const time = await getCurrentBlockTimestamp()
     await timelock.deposit(await owner.getAddress(), amount, time + 100)
     await timelock.transferLockedFunds(
       0,
