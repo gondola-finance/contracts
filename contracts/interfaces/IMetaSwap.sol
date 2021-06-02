@@ -3,13 +3,10 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./IAllowlist.sol";
 
-interface ISwap {
+interface IMetaSwap {
     // pool data view functions
     function getA() external view returns (uint256);
-
-    function getAllowlist() external view returns (IAllowlist);
 
     function getToken(uint8 index) external view returns (IERC20);
 
@@ -28,23 +25,50 @@ interface ISwap {
         uint256 dx
     ) external view returns (uint256);
 
-    function calculateTokenAmount(uint256[] calldata amounts, bool deposit)
-        external
-        view
-        returns (uint256);
+    function calculateSwapUnderlying(
+        uint8 tokenIndexFrom,
+        uint8 tokenIndexTo,
+        uint256 dx
+    ) external view returns (uint256);
 
-    function calculateRemoveLiquidity(uint256 amount)
+    function calculateTokenAmount(
+        address account,
+        uint256[] calldata amounts,
+        bool deposit
+    ) external view returns (uint256);
+
+    function calculateRemoveLiquidity(address account, uint256 amount)
         external
         view
         returns (uint256[] memory);
 
     function calculateRemoveLiquidityOneToken(
+        address account,
         uint256 tokenAmount,
         uint8 tokenIndex
     ) external view returns (uint256 availableTokenAmount);
 
     // state modifying functions
+    function initialize(
+        IERC20[] memory pooledTokens,
+        uint8[] memory decimals,
+        string memory lpTokenName,
+        string memory lpTokenSymbol,
+        uint256 a,
+        uint256 fee,
+        uint256 adminFee,
+        uint256 withdrawFee
+    ) external;
+
     function swap(
+        uint8 tokenIndexFrom,
+        uint8 tokenIndexTo,
+        uint256 dx,
+        uint256 minDy,
+        uint256 deadline
+    ) external returns (uint256);
+
+    function swapUnderlying(
         uint8 tokenIndexFrom,
         uint8 tokenIndexTo,
         uint256 dx,
@@ -55,8 +79,7 @@ interface ISwap {
     function addLiquidity(
         uint256[] calldata amounts,
         uint256 minToMint,
-        uint256 deadline,
-        bytes32[] calldata merkleProof
+        uint256 deadline
     ) external returns (uint256);
 
     function removeLiquidity(

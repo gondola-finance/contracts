@@ -1,24 +1,11 @@
-import { BigNumber, Signer, Wallet } from "ethers"
-import {
-  MAX_UINT256,
-  deployContractWithLibraries,
-  getUserTokenBalance,
-  asyncForEach,
-} from "./testUtils"
-import { deployContract, solidity } from "ethereum-waffle"
+import { BigNumber, Signer } from "ethers"
+import { MAX_UINT256, getUserTokenBalance, asyncForEach } from "./testUtils"
+import { solidity } from "ethereum-waffle"
 
 import { GenericERC20 } from "../build/typechain/GenericERC20"
-import GenericERC20Artifact from "../build/artifacts/contracts/helper/GenericERC20.sol/GenericERC20.json"
 import { LPToken } from "../build/typechain/LPToken"
-import LPTokenArtifact from "../build/artifacts/contracts/LPToken.sol/LPToken.json"
-import { MathUtils } from "../build/typechain/MathUtils"
-import MathUtilsArtifact from "../build/artifacts/contracts/MathUtils.sol/MathUtils.json"
 import { FlashLoanBorrowerExample } from "../build/typechain/FlashLoanBorrowerExample"
-import FlashLoanBorrowerExampleArtifact from "../build/artifacts/contracts/helper/FlashLoanBorrowerExample.sol/FlashLoanBorrowerExample.json"
 import { SwapFlashLoan } from "../build/typechain/SwapFlashLoan"
-import SwapFlashLoanArtifact from "../build/artifacts/contracts/SwapFlashLoan.sol/SwapFlashLoan.json"
-import { SwapUtils } from "../build/typechain/SwapUtils"
-import SwapUtilsArtifact from "../build/artifacts/contracts/SwapUtils.sol/SwapUtils.json"
 import chai from "chai"
 import { deployments, ethers } from "hardhat"
 import { solidityPack } from "ethers/lib/utils"
@@ -29,8 +16,6 @@ const { expect } = chai
 describe("Swap Flashloan", () => {
   let signers: Array<Signer>
   let swapFlashLoan: SwapFlashLoan
-  let mathUtils: MathUtils
-  let swapUtils: SwapUtils
   let flashLoanExample: FlashLoanBorrowerExample
   let DAI: GenericERC20
   let USDC: GenericERC20
@@ -63,7 +48,9 @@ describe("Swap Flashloan", () => {
 
   const setupTest = deployments.createFixture(
     async ({ deployments, ethers }) => {
+      const { get } = deployments
       await deployments.fixture() // ensure you start from a fresh deployments
+
       TOKENS.length = 0
       signers = await ethers.getSigners()
       owner = signers[0]
@@ -74,30 +61,13 @@ describe("Swap Flashloan", () => {
       user1Address = await user1.getAddress()
       user2Address = await user2.getAddress()
 
+      const erc20Factory = await ethers.getContractFactory("GenericERC20")
+
       // Deploy dummy tokens
-      DAI = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "DAI",
-        "DAI",
-        "18",
-      ])) as GenericERC20
-
-      USDC = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "USDC",
-        "USDC",
-        "6",
-      ])) as GenericERC20
-
-      USDT = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "USDT",
-        "USDT",
-        "6",
-      ])) as GenericERC20
-
-      SUSD = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "SUSD",
-        "SUSD",
-        "18",
-      ])) as GenericERC20
+      DAI = (await erc20Factory.deploy("DAI", "DAI", "18")) as GenericERC20
+      USDC = (await erc20Factory.deploy("USDC", "USDC", "6")) as GenericERC20
+      USDT = (await erc20Factory.deploy("USDT", "USDT", "6")) as GenericERC20
+      SUSD = (await erc20Factory.deploy("SUSD", "SUSD", "18")) as GenericERC20
 
       TOKENS.push(DAI, USDC, USDT, SUSD)
 
@@ -112,25 +82,18 @@ describe("Swap Flashloan", () => {
         },
       )
 
-      // Deploy MathUtils
-      mathUtils = (await deployContract(
-        signers[0] as Wallet,
-        MathUtilsArtifact,
-      )) as MathUtils
-
-      // Deploy SwapUtils with MathUtils library
-      swapUtils = (await deployContractWithLibraries(owner, SwapUtilsArtifact, {
-        MathUtils: mathUtils.address,
-      })) as SwapUtils
-      await swapUtils.deployed()
+      const swapFlashLoanFactory = await ethers.getContractFactory(
+        "SwapFlashLoan",
+        {
+          libraries: {
+            SwapUtils: (await get("SwapUtils")).address,
+            AmplificationUtils: (await get("AmplificationUtils")).address,
+          },
+        },
+      )
 
       // Deploy Swap with SwapUtils library
-      swapFlashLoan = (await deployContractWithLibraries(
-        owner,
-        SwapFlashLoanArtifact,
-        { SwapUtils: swapUtils.address },
-      )) as SwapFlashLoan
-      await swapFlashLoan.deployed()
+      swapFlashLoan = (await swapFlashLoanFactory.deploy()) as SwapFlashLoan
 
       await swapFlashLoan.initialize(
         [DAI.address, USDC.address, USDT.address, SUSD.address],
@@ -141,6 +104,9 @@ describe("Swap Flashloan", () => {
         SWAP_FEE,
         0,
         0,
+        (
+          await deployments.get("LPToken")
+        ).address,
       )
 
       expect(await swapFlashLoan.getVirtualPrice()).to.be.eq(0)
@@ -148,7 +114,7 @@ describe("Swap Flashloan", () => {
       swapStorage = await swapFlashLoan.swapStorage()
 
       swapToken = (await ethers.getContractAt(
-        LPTokenArtifact.abi,
+        "LPToken",
         swapStorage.lpToken,
       )) as LPToken
 
@@ -174,12 +140,15 @@ describe("Swap Flashloan", () => {
         String(200e18),
       )
 
-      // Deploy MathUtils
-      flashLoanExample = (await deployContract(
-        signers[0] as Wallet,
-        FlashLoanBorrowerExampleArtifact,
-      )) as FlashLoanBorrowerExample
-      await flashLoanExample.deployed()
+      // Deploy an example flash loan borrower contract
+      const flashLoanExampleFactory = await ethers.getContractFactory(
+        "FlashLoanBorrowerExample",
+      )
+      flashLoanExample =
+        (await flashLoanExampleFactory.deploy()) as FlashLoanBorrowerExample
+
+      // Set fees to easier numbers for debugging
+      await swapFlashLoan.setFlashLoanFees(100, 5000)
     },
   )
 
@@ -265,10 +234,29 @@ describe("Swap Flashloan", () => {
     ).to.emit(swapFlashLoan, "FlashLoan")
 
     // Check the borrower contract paid off the balance
-    expect(await USDC.balanceOf(flashLoanExample.address)).to.eq(0)
     expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000024999981618719")
     expect(await swapFlashLoan.getTokenBalance(1)).to.eq("50005000")
     expect(await swapFlashLoan.getAdminBalance(1)).to.eq("5000")
+    expect(await USDC.balanceOf(swapFlashLoan.address)).to.eq("50010000")
+
+    // Try to do the flashloan again.
+    await USDC.connect(user1).transfer(flashLoanExample.address, flashLoanFee)
+    await expect(
+      flashLoanExample.flashLoan(swapFlashLoan.address, USDC.address, 1e6, []),
+    ).to.emit(swapFlashLoan, "FlashLoan")
+
+    expect(await USDC.balanceOf(flashLoanExample.address)).to.eq(0)
+    expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000049999926479164")
+    expect(await swapFlashLoan.getTokenBalance(1)).to.eq("50010000")
+    expect(await swapFlashLoan.getAdminBalance(1)).to.eq("10000")
+    expect(await USDC.balanceOf(swapFlashLoan.address)).to.eq("50020000")
+
+    // Try to withdraw the protocol fees
+    await swapFlashLoan.withdrawAdminFees()
+    expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000049999926479164")
+    expect(await swapFlashLoan.getTokenBalance(1)).to.eq("50010000")
+    expect(await swapFlashLoan.getAdminBalance(1)).to.eq("0")
+    expect(await USDC.balanceOf(swapFlashLoan.address)).to.eq("50010000")
   })
 
   describe("setFlashLoanFees", () => {
@@ -293,13 +281,55 @@ describe("Swap Flashloan", () => {
       ).to.be.revertedWith("fees are not in valid range")
     })
 
-    it("Succeeds when fees are in the valid range", async () => {
-      await swapFlashLoan.setFlashLoanFees(50, 100)
-      expect(await swapFlashLoan.flashLoanFeeBPS()).to.eq(50)
-      expect(await swapFlashLoan.protocolFeeShareBPS()).to.eq(100)
+    it("Succeeds when protocol fee bps is set to 0", async () => {
+      // Realistic flashloan fee
+      const newFlashLoanFeeBPS = 8
+      const newProtocolFeeBPS = 0
+
+      await swapFlashLoan.setFlashLoanFees(
+        newFlashLoanFeeBPS,
+        newProtocolFeeBPS,
+      )
+      expect(await swapFlashLoan.flashLoanFeeBPS()).to.eq(newFlashLoanFeeBPS)
+      expect(await swapFlashLoan.protocolFeeShareBPS()).to.eq(newProtocolFeeBPS)
 
       const flashLoanAmount = BigNumber.from(1e6)
-      const flashLoanFee = flashLoanAmount.mul(50).div(10000)
+      const flashLoanFee = flashLoanAmount.mul(newFlashLoanFeeBPS).div(10000)
+
+      // Check the initial balance and the virtual price
+      expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000000000000000000")
+      expect(await swapFlashLoan.getTokenBalance(1)).to.eq("50000000")
+
+      // Since the contract is empty, we need to give the contract some USDC to have enough to pay off the fee
+      await USDC.connect(user1).transfer(flashLoanExample.address, flashLoanFee)
+      await flashLoanExample.flashLoan(
+        swapFlashLoan.address,
+        USDC.address,
+        1e6,
+        [],
+      )
+
+      // Check the borrower contract paid off the balance
+      expect(await USDC.balanceOf(flashLoanExample.address)).to.eq(0)
+      expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000003999999529416")
+      expect(await swapFlashLoan.getTokenBalance(1)).to.eq("50000800")
+      expect(await swapFlashLoan.getAdminBalance(1)).to.eq("0")
+      expect(await USDC.balanceOf(swapFlashLoan.address)).to.eq("50000800")
+    })
+
+    it("Succeeds when fees are in the valid range", async () => {
+      const newFlashLoanFeeBPS = 50
+      const newProtocolFeeBPS = 100
+
+      await swapFlashLoan.setFlashLoanFees(
+        newFlashLoanFeeBPS,
+        newProtocolFeeBPS,
+      )
+      expect(await swapFlashLoan.flashLoanFeeBPS()).to.eq(newFlashLoanFeeBPS)
+      expect(await swapFlashLoan.protocolFeeShareBPS()).to.eq(newProtocolFeeBPS)
+
+      const flashLoanAmount = BigNumber.from(1e6)
+      const flashLoanFee = flashLoanAmount.mul(newFlashLoanFeeBPS).div(10000)
 
       // Check the initial balance and the virtual price
       expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000000000000000000")
@@ -319,6 +349,7 @@ describe("Swap Flashloan", () => {
       expect(await swapFlashLoan.getVirtualPrice()).to.eq("1000024749981984496")
       expect(await swapFlashLoan.getTokenBalance(1)).to.eq("50004950")
       expect(await swapFlashLoan.getAdminBalance(1)).to.eq("50")
+      expect(await USDC.balanceOf(swapFlashLoan.address)).to.eq("50005000")
     })
   })
 })
