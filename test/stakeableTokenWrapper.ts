@@ -1,12 +1,10 @@
 import { Signer, Wallet } from "ethers"
-import { deployContract, solidity } from "ethereum-waffle"
+import { solidity } from "ethereum-waffle"
 import { deployments, ethers } from "hardhat"
 
 import { GenericERC20 } from "../build/typechain/GenericERC20"
-import GenericERC20Artifact from "../build/artifacts/contracts/helper/GenericERC20.sol/GenericERC20.json"
 import { IERC20 } from "../build/typechain/IERC20"
 import { StakeableTokenWrapper } from "../build/typechain/StakeableTokenWrapper"
-import StakeableTokenWrapperArtifact from "../build/artifacts/contracts/StakeableTokenWrapper.sol/StakeableTokenWrapper.json"
 import chai from "chai"
 
 chai.use(solidity)
@@ -19,25 +17,21 @@ describe("StakeableTokenWrapper", () => {
   let tokenWrapper: StakeableTokenWrapper
 
   async function deployWrapper(token: IERC20): Promise<StakeableTokenWrapper> {
-    const contract = (await deployContract(
-      signers[0] as Wallet,
-      StakeableTokenWrapperArtifact,
-      [token.address],
-    )) as StakeableTokenWrapper
-    return contract
+    const factory = await ethers.getContractFactory("StakeableTokenWrapper")
+    return factory.deploy(token.address) as Promise<StakeableTokenWrapper>
   }
 
   async function approveAndStake(
     wallet: Wallet,
     amount: number,
-  ): Promise<Array<StakeableTokenWrapper | GenericERC20>> {
+  ): Promise<StakeableTokenWrapper> {
     const wrapperAsStaker = tokenWrapper.connect(wallet)
     const tokenAsStaker = basicToken.connect(wallet)
 
     await tokenAsStaker.approve(wrapperAsStaker.address, amount)
     await wrapperAsStaker.stake(amount)
 
-    return [wrapperAsStaker, tokenAsStaker]
+    return wrapperAsStaker
   }
 
   const setupTest = deployments.createFixture(
@@ -45,10 +39,11 @@ describe("StakeableTokenWrapper", () => {
       await deployments.fixture() // ensure you start from a fresh deployments
 
       signers = await ethers.getSigners()
-      basicToken = (await deployContract(
-        signers[0] as Wallet,
-        GenericERC20Artifact,
-        ["Basic Token", "BASIC", "18"],
+      const erc20Factory = await ethers.getContractFactory("GenericERC20")
+      basicToken = (await erc20Factory.deploy(
+        "Basic Token",
+        "BASIC",
+        "18",
       )) as GenericERC20
 
       await basicToken.mint(await signers[0].getAddress(), 10 ** 10)
@@ -81,7 +76,7 @@ describe("StakeableTokenWrapper", () => {
   })
 
   it("Emits an event on withdrawing", async () => {
-    const [wrapperContract] = await approveAndStake(signers[1] as Wallet, 1000)
+    const wrapperContract = await approveAndStake(signers[1] as Wallet, 1000)
 
     await expect(wrapperContract.withdraw(1000)).to.emit(
       tokenWrapper,
@@ -90,7 +85,7 @@ describe("StakeableTokenWrapper", () => {
   })
 
   it("Only allows staked funds to be withdrawn", async () => {
-    const [wrapperContract] = await approveAndStake(signers[1] as Wallet, 1000)
+    const wrapperContract = await approveAndStake(signers[1] as Wallet, 1000)
 
     await expect(wrapperContract.withdraw(1001)).to.be.reverted
   })

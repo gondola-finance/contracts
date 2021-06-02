@@ -1,16 +1,10 @@
-import { Signer, Wallet } from "ethers"
-import { ZERO_ADDRESS, deployContractWithLibraries } from "./testUtils"
-import { deployContract, solidity } from "ethereum-waffle"
+import { Signer } from "ethers"
+import { ZERO_ADDRESS } from "./testUtils"
+import { solidity } from "ethereum-waffle"
 import { deployments, ethers } from "hardhat"
 
 import { GenericERC20 } from "../build/typechain/GenericERC20"
-import GenericERC20Artifact from "../build/artifacts/contracts/helper/GenericERC20.sol/GenericERC20.json"
-import { MathUtils } from "../build/typechain/MathUtils"
-import MathUtilsArtifact from "../build/artifacts/contracts/MathUtils.sol/MathUtils.json"
 import { Swap } from "../build/typechain/Swap"
-import SwapArtifact from "../build/artifacts/contracts/Swap.sol/Swap.json"
-import { SwapUtils } from "../build/typechain/SwapUtils"
-import SwapUtilsArtifact from "../build/artifacts/contracts/SwapUtils.sol/SwapUtils.json"
 import chai from "chai"
 
 chai.use(solidity)
@@ -18,8 +12,6 @@ const { expect } = chai
 
 describe("Swap", () => {
   let signers: Array<Signer>
-  let mathUtils: MathUtils
-  let swapUtils: SwapUtils
   let swap: Swap
   let firstToken: GenericERC20
   let secondToken: GenericERC20
@@ -33,40 +25,34 @@ describe("Swap", () => {
 
   const setupTest = deployments.createFixture(
     async ({ deployments, ethers }) => {
+      const { get } = deployments
       await deployments.fixture() // ensure you start from a fresh deployments
 
       signers = await ethers.getSigners()
       owner = signers[0]
 
       // Deploy dummy tokens
-      firstToken = (await deployContract(
-        owner as Wallet,
-        GenericERC20Artifact,
-        ["First Token", "FIRST", "18"],
+      const erc20Factory = await ethers.getContractFactory("GenericERC20")
+
+      firstToken = (await erc20Factory.deploy(
+        "First Token",
+        "FIRST",
+        "18",
       )) as GenericERC20
 
-      secondToken = (await deployContract(
-        owner as Wallet,
-        GenericERC20Artifact,
-        ["Second Token", "SECOND", "18"],
+      secondToken = (await erc20Factory.deploy(
+        "Second Token",
+        "SECOND",
+        "18",
       )) as GenericERC20
 
-      // Deploy MathUtils
-      mathUtils = (await deployContract(
-        signers[0] as Wallet,
-        MathUtilsArtifact,
-      )) as MathUtils
-
-      // Deploy SwapUtils with MathUtils library
-      swapUtils = (await deployContractWithLibraries(owner, SwapUtilsArtifact, {
-        MathUtils: mathUtils.address,
-      })) as SwapUtils
-      await swapUtils.deployed()
-
-      swap = (await deployContractWithLibraries(owner, SwapArtifact, {
-        SwapUtils: swapUtils.address,
-      })) as Swap
-      await swap.deployed()
+      const swapFactory = await ethers.getContractFactory("Swap", {
+        libraries: {
+          SwapUtils: (await get("SwapUtils")).address,
+          AmplificationUtils: (await get("AmplificationUtils")).address,
+        },
+      })
+      swap = (await swapFactory.deploy()) as Swap
     },
   )
 
@@ -86,6 +72,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_pooledTokens.length <= 1")
     })
@@ -101,6 +90,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_pooledTokens.length > 32")
     })
@@ -116,6 +108,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_pooledTokens decimals mismatch")
     })
@@ -131,6 +126,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("Duplicate tokens")
     })
@@ -146,6 +144,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("The 0 address isn't an ERC-20")
     })
@@ -161,6 +162,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("Token decimals exceeds max")
     })
@@ -176,6 +180,9 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_a exceeds maximum")
     })
@@ -191,6 +198,9 @@ describe("Swap", () => {
           10e8 + 1,
           0,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_fee exceeds maximum")
     })
@@ -206,6 +216,9 @@ describe("Swap", () => {
           SWAP_FEE,
           10e10 + 1,
           0,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_adminFee exceeds maximum")
     })
@@ -221,8 +234,27 @@ describe("Swap", () => {
           SWAP_FEE,
           0,
           10e8 + 1,
+          (
+            await deployments.get("LPToken")
+          ).address,
         ),
       ).to.be.revertedWith("_withdrawFee exceeds maximum")
+    })
+
+    it("Reverts when the LPToken target does not implement initialize function", async () => {
+      await expect(
+        swap.initialize(
+          [firstToken.address, secondToken.address],
+          [18, 18],
+          LP_TOKEN_NAME,
+          LP_TOKEN_SYMBOL,
+          INITIAL_A_VALUE,
+          SWAP_FEE,
+          0,
+          0,
+          ZERO_ADDRESS,
+        ),
+      ).to.be.revertedWith("function returned an unexpected amount of data")
     })
   })
 })

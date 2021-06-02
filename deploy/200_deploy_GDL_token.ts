@@ -7,7 +7,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { execute, deploy, get } = deployments
   const { deployer } = await getNamedAccounts()
   const total = 500_000_000
-  const reserve = 200_000_000
+  const reserve = 200_000_000 // TODO
 
   await deploy("GondolaToken", {
     from: deployer,
@@ -16,7 +16,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [BigNumber.from(total).mul(BigNumber.from(10).pow(18))],
   })
 
-  // await execute("GondolaToken", { from: deployer, log: true }, "distribute", "0x03C73041Af2951aD601a6DDfa75Df73e6B43c790", BigNumber.from(reserve).mul(BigNumber.from(10).pow(18)))
+  // await execute("GondolaToken", { from: deployer, log: true }, "distribute", deployer, BigNumber.from(reserve).mul(BigNumber.from(10).pow(18)))
 }
 export default func
 func.tags = []

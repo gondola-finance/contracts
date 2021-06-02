@@ -1,28 +1,21 @@
-import { BigNumber, Signer, Wallet } from "ethers"
+import { BigNumber, Signer } from "ethers"
 import {
   MAX_UINT256,
   TIME,
   asyncForEach,
-  deployContractWithLibraries,
   getCurrentBlockTimestamp,
   getPoolBalances,
   getUserTokenBalance,
   getUserTokenBalances,
   setTimestamp,
 } from "./testUtils"
-import { deployContract, solidity } from "ethereum-waffle"
+import { solidity } from "ethereum-waffle"
 import { deployments, ethers } from "hardhat"
 
 import { GenericERC20 } from "../build/typechain/GenericERC20"
-import GenericERC20Artifact from "../build/artifacts/contracts/helper/GenericERC20.sol/GenericERC20.json"
 import { LPToken } from "../build/typechain/LPToken"
-import LPTokenArtifact from "../build/artifacts/contracts/LPToken.sol/LPToken.json"
-import { MathUtils } from "../build/typechain/MathUtils"
-import MathUtilsArtifact from "../build/artifacts/contracts/MathUtils.sol/MathUtils.json"
 import { Swap } from "../build/typechain/Swap"
-import SwapArtifact from "../build/artifacts/contracts/Swap.sol/Swap.json"
 import { SwapUtils } from "../build/typechain/SwapUtils"
-import SwapUtilsArtifact from "../build/artifacts/contracts/SwapUtils.sol/SwapUtils.json"
 import chai from "chai"
 
 chai.use(solidity)
@@ -31,7 +24,6 @@ const { expect } = chai
 describe("Swap with 4 tokens", () => {
   let signers: Array<Signer>
   let swap: Swap
-  let mathUtils: MathUtils
   let swapUtils: SwapUtils
   let DAI: GenericERC20
   let USDC: GenericERC20
@@ -64,6 +56,7 @@ describe("Swap with 4 tokens", () => {
 
   const setupTest = deployments.createFixture(
     async ({ deployments, ethers }) => {
+      const { get } = deployments
       await deployments.fixture() // ensure you start from a fresh deployments
 
       TOKENS.length = 0
@@ -77,29 +70,12 @@ describe("Swap with 4 tokens", () => {
       user2Address = await user2.getAddress()
 
       // Deploy dummy tokens
-      DAI = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "DAI",
-        "DAI",
-        "18",
-      ])) as GenericERC20
+      const erc20Factory = await ethers.getContractFactory("GenericERC20")
 
-      USDC = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "USDC",
-        "USDC",
-        "6",
-      ])) as GenericERC20
-
-      USDT = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "USDT",
-        "USDT",
-        "6",
-      ])) as GenericERC20
-
-      SUSD = (await deployContract(owner as Wallet, GenericERC20Artifact, [
-        "SUSD",
-        "SUSD",
-        "18",
-      ])) as GenericERC20
+      DAI = (await erc20Factory.deploy("DAI", "DAI", "18")) as GenericERC20
+      USDC = (await erc20Factory.deploy("USDC", "USDC", "6")) as GenericERC20
+      USDT = (await erc20Factory.deploy("USDT", "USDT", "6")) as GenericERC20
+      SUSD = (await erc20Factory.deploy("SUSD", "SUSD", "18")) as GenericERC20
 
       TOKENS.push(DAI, USDC, USDT, SUSD)
 
@@ -114,23 +90,14 @@ describe("Swap with 4 tokens", () => {
         },
       )
 
-      // Deploy MathUtils
-      mathUtils = (await deployContract(
-        signers[0] as Wallet,
-        MathUtilsArtifact,
-      )) as MathUtils
-
-      // Deploy SwapUtils with MathUtils library
-      swapUtils = (await deployContractWithLibraries(owner, SwapUtilsArtifact, {
-        MathUtils: mathUtils.address,
-      })) as SwapUtils
-      await swapUtils.deployed()
-
       // Deploy Swap with SwapUtils library
-      swap = (await deployContractWithLibraries(owner, SwapArtifact, {
-        SwapUtils: swapUtils.address,
-      })) as Swap
-      await swap.deployed()
+      const swapFactory = await ethers.getContractFactory("Swap", {
+        libraries: {
+          SwapUtils: (await get("SwapUtils")).address,
+          AmplificationUtils: (await get("AmplificationUtils")).address,
+        },
+      })
+      swap = (await swapFactory.deploy()) as Swap
 
       await swap.initialize(
         [DAI.address, USDC.address, USDT.address, SUSD.address],
@@ -141,6 +108,9 @@ describe("Swap with 4 tokens", () => {
         SWAP_FEE,
         0,
         0,
+        (
+          await get("LPToken")
+        ).address,
       )
 
       expect(await swap.getVirtualPrice()).to.be.eq(0)
@@ -148,7 +118,7 @@ describe("Swap with 4 tokens", () => {
       swapStorage = await swap.swapStorage()
 
       swapToken = (await ethers.getContractAt(
-        LPTokenArtifact.abi,
+        "LPToken",
         swapStorage.lpToken,
       )) as LPToken
 
