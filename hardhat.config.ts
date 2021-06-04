@@ -23,6 +23,14 @@ let config: HardhatUserConfig = {
       url: process.env.ALCHEMY_API,
       gasPrice: 140 * 1000000000,
     },
+    fuji: {
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      gasPrice: 470 * 1000000000,
+    },
+    ava_mainnet: {
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      gasPrice: 225 * 1000000000,  
+    }
   },
   paths: {
     artifacts: "./build/artifacts",
@@ -61,8 +69,8 @@ let config: HardhatUserConfig = {
       1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
     },
     libraryDeployer: {
-      default: 1, // use a different account for deploying libraries on the hardhat network
-      1: 0, // use the same address as the main deployer on mainnet
+      default: 0, // use a different account for deploying libraries on the hardhat network
+      1: 1, // use the same address as the main deployer on mainnet
     },
   },
   spdxLicenseIdentifier: {
@@ -80,6 +88,14 @@ if (process.env.ACCOUNT_PRIVATE_KEYS) {
     ...config.networks,
     mainnet: {
       ...config.networks?.mainnet,
+      accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
+    },
+    fuji: {
+      ...config.networks?.fuji,
+      accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
+    },
+    ava_mainnet: {
+      ...config.networks?.ava_mainnet,
       accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
     },
   }
