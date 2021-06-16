@@ -30,11 +30,12 @@ let config: HardhatUserConfig = {
     ava_mainnet: {
       url: "https://api.avax.network/ext/bc/C/rpc",
       gasPrice: 225 * 1000000000,  
+    },
+    bsc_mainnet: {
+      url: "https://bsc-dataseed.binance.org/",
+      chainId: 56,
+      gasPrice: 5000000000,
     }
-  },
-  paths: {
-    artifacts: "./build/artifacts",
-    cache: "./build/cache",
   },
   solidity: {
     compilers: [
@@ -96,6 +97,10 @@ if (process.env.ACCOUNT_PRIVATE_KEYS) {
     },
     ava_mainnet: {
       ...config.networks?.ava_mainnet,
+      accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
+    },
+    bsc_mainnet: {
+      ...config.networks?.bsc_mainnet,
       accounts: JSON.parse(process.env.ACCOUNT_PRIVATE_KEYS),
     },
   }
