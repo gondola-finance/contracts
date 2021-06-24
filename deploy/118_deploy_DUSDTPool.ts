@@ -7,23 +7,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { execute, get, getOrNull, log, read, save } = deployments
   const { deployer } = await getNamedAccounts()
 
-  if((await getChainId()) != CHAIN_ID.BSC_MAINNET) {
+  if((await getChainId()) != CHAIN_ID.AVA_MAINNET) {
     return
   }
 
   // Manually check if the pool is already deployed
-  let gondolaUSDCPool = await getOrNull("GondolaUSDCPool")
-  if (gondolaUSDCPool) {
-    log(`reusing "GondolaUSDCPool" at ${gondolaUSDCPool.address}`)
+  let gondolaDUSDTPool = await getOrNull("GondolaDUSDTPool")
+  if (gondolaDUSDTPool) {
+    log(`reusing "GondolaDUSDTPool" at ${gondolaDUSDTPool.address}`)
   } else {
     // Constructor arguments
     const TOKEN_ADDRESSES = [
-      (await get("USDC")).address,
-      (await get("ZUSDC")).address,
+      (await get("USDT")).address,
+      (await get("DUSDT")).address,
     ]
-    const TOKEN_DECIMALS = [18, 6]
-    const LP_TOKEN_NAME = "Gondola USDC/ZUSDC"
-    const LP_TOKEN_SYMBOL = "gondolaUSDC"
+    const TOKEN_DECIMALS = [6, 6]
+    const LP_TOKEN_NAME = "Gondola USDT/DUSDT"
+    const LP_TOKEN_SYMBOL = "gondolaDUSDT"
     const INITIAL_A = 100
     const SWAP_FEE = 2e6
     const ADMIN_FEE = 2e6
@@ -52,29 +52,29 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const newPoolEvent = receipt?.events?.find(
       (e: any) => e["event"] == "NewSwapPool",
     )
-    const usdcSwapAddress = newPoolEvent["args"]["swapAddress"]
+    const dusdtSwapAddress = newPoolEvent["args"]["swapAddress"]
     log(
-      `deployed USDC pool clone (targeting "SwapFlashLoan") at ${usdcSwapAddress}`,
+      `deployed DUSDT pool clone (targeting "SwapFlashLoan") at ${dusdtSwapAddress}`,
     )
-    await save("GondolaUSDCPool", {
+    await save("GondolaDUSDTPool", {
       abi: (await get("SwapFlashLoan")).abi,
-      address: usdcSwapAddress,
+      address: dusdtSwapAddress,
+    })
+
+    const lpTokenAddress = (await read("GondolaDUSDTPool", "swapStorage")).lpToken
+    log(`DUSDT pool LP Token at ${lpTokenAddress}`)
+  
+    await save("GondolaDUSDTPoolLPToken", {
+      abi: (await get("DUSDT")).abi, // Generic ERC20 ABI
+      address: lpTokenAddress,
     })
   }
-
-  const lpTokenAddress = (await read("GondolaUSDCPool", "swapStorage")).lpToken
-  log(`USDC pool LP Token at ${lpTokenAddress}`)
-
-  await save("GondolaUSDCPoolLPToken", {
-    abi: (await get("DAI")).abi, // Generic ERC20 ABI
-    address: lpTokenAddress,
-  })
 }
 export default func
-func.tags = ["USDCPool"]
+func.tags = ["DUSDPool"]
 func.dependencies = [
   "SwapUtils",
   "SwapDeployer",
   "SwapFlashLoan",
-  "USDCPoolTokens",
+  "DUSDTPoolTokens",
 ]
